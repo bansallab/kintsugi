@@ -73,8 +73,10 @@ def test_complete_existing_eager_series_pipe(
 
 
 def test_complete_exception(df_inp: pl.DataFrame) -> None:
-    with pytest.raises(TypeError):
-        df_inp.pipe(complete_rows, 0, 1).sort("country", "year")  # pyright: ignore [reportArgumentType]
+    with pytest.raises(
+        TypeError, match="^The columns must be specified using str or Polars Series"
+    ):
+        df_inp.pipe(complete_rows, "country", 1).sort("country", "year")  # pyright: ignore [reportArgumentType]
 
 
 def test_complete_existing_lazy(lf_inp: pl.LazyFrame, df_out: pl.DataFrame) -> None:

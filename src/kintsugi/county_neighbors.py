@@ -77,7 +77,15 @@ def county_neighbors(
                     )
 
             buf.seek(0)  # return to start before Polars read
-            lf = pl.scan_csv(buf, infer_schema=False)
+            lf = pl.scan_csv(
+                buf,
+                schema={
+                    "county_name": pl.String,
+                    "county_fips": pl.String,
+                    "county_neighbor": pl.String,
+                    "county_fips_neighbor": pl.String,
+                },
+            )
     else:
         lf = pl.scan_csv(
             data,
@@ -88,7 +96,12 @@ def county_neighbors(
                 "county_neighbor",
                 "county_fips_neighbor",
             ],
-            infer_schema=False,
+            schema_overrides={
+                "county_name": pl.String,
+                "county_fips": pl.String,
+                "county_neighbor": pl.String,
+                "county_fips_neighbor": pl.String,
+            },
         ).select(
             "county_name",
             "county_fips",
