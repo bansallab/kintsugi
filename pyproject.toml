@@ -1,0 +1,50 @@
+[project]
+name = "kintsugi"
+version = "0.1.0"
+description = "Commonly used datasets and functions"
+readme = "README.md"
+authors = [
+    { name = "Andrew Tiu", email = "63322884+winter-again@users.noreply.github.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "geopandas>=1.1.2",
+    "pandas>=3.0.1",
+    "platformdirs>=4.9.2",
+    "polars>=1.38.1",
+    "pyarrow>=23.0.1",
+    "requests>=2.32.5",
+]
+[dependency-groups]
+dev = [
+    "mypy>=1.19.1",
+    "pandas-stubs>=3.0.0.260204",
+    "types-geopandas>=1.1.2.20260120",
+    "types-requests>=2.32.4.20260107",
+]
+test = [
+    "nox>=2026.2.9",
+    "pytest>=9.0.2",
+]
+
+[build-system]
+requires = ["uv_build>=0.10.4,<0.11.0"]
+build-backend = "uv_build"
+
+[tool.uv]
+default-groups = ["dev", "test"]
+
+[tool.basedpyright]
+include = ["src", "tests"]
+
+reportUnusedCallResult = false
+reportUnknownMemberType = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = [
+    "--import-mode=importlib",
+    "-x", # fail fast
+    "-ra", # show extra info for all except passed tests
+    "-v", # verbose
+]
