@@ -127,7 +127,19 @@ def county_neighbors(
     return lf
 
 
-def county_adj_list(year: NeighborsYear = 2025) -> pl.LazyFrame:
+@overload
+def county_adj_list(
+    year: NeighborsYear, as_pandas: Literal[False] = ...
+) -> pl.LazyFrame: ...
+
+
+@overload
+def county_adj_list(year: NeighborsYear, as_pandas: Literal[True]) -> pd.DataFrame: ...
+
+
+def county_adj_list(
+    year: NeighborsYear, as_pandas: bool = False
+) -> pl.LazyFrame | pd.DataFrame:
     """
     Data from `county_neighbors()` but in adjacency list format
     """
@@ -138,12 +150,30 @@ def county_adj_list(year: NeighborsYear = 2025) -> pl.LazyFrame:
         .agg(county_fips_neighbor=pl.col("county_fips_neighbor"))
     )
 
+    if as_pandas:
+        return lf.collect().to_pandas()
+
     return lf
 
 
-def county_neighbors_from_shapefile(year: ShapefileYear) -> pl.LazyFrame:
+@overload
+def county_neighbors_from_shapefile(
+    year: ShapefileYear, as_pandas: Literal[False] = ...
+) -> pl.LazyFrame: ...
+
+
+@overload
+def county_neighbors_from_shapefile(
+    year: ShapefileYear, as_pandas: Literal[True]
+) -> pd.DataFrame: ...
+
+
+def county_neighbors_from_shapefile(
+    year: ShapefileYear, as_pandas: bool = False
+) -> pl.LazyFrame | pd.DataFrame:
     """
-    Generate county neighbor relationships based on Cartographic Boundary county shapefile
+    Generate county neighbor relationships based on Cartographic Boundary
+    county shapefile (self spatial join).
     """
     df_geo = county_geo(year)
     neighbors = (
@@ -176,6 +206,7 @@ def county_neighbors_from_shapefile(year: ShapefileYear) -> pl.LazyFrame:
         .sort_values("county_fips")
     )
 
-    lf = pl.from_pandas(neighbors).sort("county_fips", "county_fips_neighbor").lazy()
+    if as_pandas:
+        return pd.DataFrame(neighbors)
 
-    return lf
+    return pl.from_pandas(neighbors).sort("county_fips", "county_fips_neighbor").lazy()
