@@ -2,7 +2,7 @@
 
 ![Tests](https://github.com/winter-again/kintsugi/actions/workflows/tests.yml/badge.svg)
 
-Collection of commonly used datasets and functions. Datasets stored in [kintsugi-data](https://github.com/winter-again/kintsugi-data).
+Collection of commonly used datasets and functions. Datasets are stored in [kintsugi-data](https://github.com/winter-again/kintsugi-data).
 
 ## Installation
 
