@@ -7,14 +7,13 @@ Collection of commonly used datasets and functions. Datasets are stored in [kint
 ## Installation
 
 ```bash
-# with uv
-uv add "kintsugi @ git+ssh://git@github.com/winter-again/kintsugi"
+# with uv via HTTPS
+uv add git+https://github.com/winter-again/kintsugi
+# with uv via SSH
+uv add git+ssh://git@github.com/winter-again/kintsugi
 
-# with pip
-pip install git+https://git@github.com/winter-again/kintsugi
-# via SSH
+# with pip via HTTPS
+pip install git+https://github.com/winter-again/kintsugi
+# with pip via SSH
 pip install git+ssh://git@github.com/winter-again/kintsugi
-
-# designate specific version tag or branch
-pip install git+ssh://git@github.com/winter-again/kintsugi.git@v0.2.0
 ```
