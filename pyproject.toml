@@ -8,7 +8,6 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "geopandas>=1.1.2",
     "pandas>=3.0.1",
     "platformdirs>=4.9.2",
     "polars>=1.38.1",
@@ -24,7 +23,7 @@ dev = [
 ]
 test = [
     "nox>=2026.2.9",
-    "pandera[geopandas,polars]>=0.24.0",
+    "pandera[geopandas,polars]>=0.29.0",
     "pytest>=9.0.2",
 ]
 
