@@ -1,23 +1,39 @@
+import pandera.polars as pa
 import polars as pl
 from pandas import DataFrame
+from pandera.polars import PolarsData
 
 from kintsugi.states import states
 
+from .models import BasePolarsModel
+
+
+class States(BasePolarsModel):
+    state_name: pl.String = pa.Field(unique=True)  # pyright: ignore [reportAny]
+    state_abb: pl.String = pa.Field(unique=True)  # pyright: ignore [reportAny]
+    state_fips: pl.String = pa.Field(unique=True)  # pyright: ignore [reportAny]
+
+    class Config:  # pyright: ignore [reportIncompatibleVariableOverride]
+        unique: list[str] = ["state_name", "state_abb", "state_fips"]
+
+    @pa.dataframe_check
+    def has_correct_height(cls, data: PolarsData) -> bool:
+        return data.lazyframe.select(pl.len()).collect().item() == 51  # pyright: ignore [reportAny] pyrgi
+
+    @pa.dataframe_check
+    def has_correct_states(cls, data: PolarsData) -> bool:
+        return (
+            data.lazyframe.select(
+                pl.col("state_fips").is_between(pl.lit("01"), pl.lit("56")).all()
+            )
+            .collect()
+            .item()
+            is True
+        )
+
 
 def test_states() -> None:
-    lf_states = states()
-
-    assert lf_states.collect_schema().names() == [
-        "state_name",
-        "state_abb",
-        "state_fips",
-    ]
-    assert lf_states.select(pl.len()).collect().item() == 51
-    assert lf_states.unique().select(pl.len()).collect().item() == 51
-    assert (
-        lf_states.select(pl.any_horizontal(pl.all().is_null().any())).collect().item()
-        is False
-    )
+    states().collect().pipe(States.validate, lazy=True)
 
 
 def test_states_as_pandas() -> None:

@@ -1,6 +1,6 @@
 [project]
 name = "kintsugi"
-version = "0.1.0"
+version = "0.2.0"
 description = "Commonly used datasets and functions"
 readme = "README.md"
 authors = [
@@ -24,6 +24,7 @@ dev = [
 ]
 test = [
     "nox>=2026.2.9",
+    "pandera[geopandas,polars]>=0.24.0",
     "pytest>=9.0.2",
 ]
 

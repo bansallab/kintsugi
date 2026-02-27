@@ -50,7 +50,7 @@ def county_neighbors(
                 fieldnames=[
                     "county_name",
                     "county_fips",
-                    "county_neighbor",
+                    "county_name_neighbor",
                     "county_fips_neighbor",
                 ],
             )
@@ -71,7 +71,7 @@ def county_neighbors(
                         {
                             "county_name": cur_county,
                             "county_fips": cur_fips,
-                            "county_neighbor": row[2],
+                            "county_name_neighbor": row[2],
                             "county_fips_neighbor": row[3],
                         }
                     )
@@ -82,7 +82,7 @@ def county_neighbors(
                 schema={
                     "county_name": pl.String,
                     "county_fips": pl.String,
-                    "county_neighbor": pl.String,
+                    "county_name_neighbor": pl.String,
                     "county_fips_neighbor": pl.String,
                 },
             )
@@ -93,19 +93,19 @@ def county_neighbors(
             new_columns=[
                 "county_name",
                 "county_fips",
-                "county_neighbor",
+                "county_name_neighbor",
                 "county_fips_neighbor",
             ],
             schema_overrides={
                 "county_name": pl.String,
                 "county_fips": pl.String,
-                "county_neighbor": pl.String,
+                "county_name_neighbor": pl.String,
                 "county_fips_neighbor": pl.String,
             },
         ).select(
             "county_name",
             "county_fips",
-            "county_neighbor",
+            "county_name_neighbor",
             "county_fips_neighbor",
         )
 
@@ -126,11 +126,11 @@ def county_neighbors(
         )
         .unnest("county_name")
         .with_columns(
-            county_neighbor=pl.col("county_neighbor")
+            county_name_neighbor=pl.col("county_name_neighbor")
             .str.split_exact(", ", 1)
-            .struct.rename_fields(["county_neighbor", "state_abb_neighbor"])
+            .struct.rename_fields(["county_name_neighbor", "state_abb_neighbor"])
         )
-        .unnest("county_neighbor")
+        .unnest("county_name_neighbor")
         .sort("county_fips", "county_fips_neighbor")
     )
 
