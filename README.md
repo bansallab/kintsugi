@@ -17,3 +17,49 @@ pip install git+https://github.com/winter-again/kintsugi
 # with pip via SSH
 pip install git+ssh://git@github.com/winter-again/kintsugi
 ```
+
+## Datasets
+
+Currently supported datasets:
+
+County neighbors
+
+```python
+from kintsugi.county_neighbors import county_neighbors
+
+neighbors = county_neighbors()
+```
+
+State and county shapefiles
+
+```python
+from kintsugi.geo import county_geo, state_geo
+
+counties = county_geo(2024)
+states = state_geo(2024)
+```
+
+County and county-age population counts
+
+```python
+from kintsugi.county_pop import county_pop, county_age_pop
+
+lf_county_pop = county_pop(2024)
+lf_county_age_pop = county_age_pop(2024)
+```
+
+Low-population county groups
+
+```python
+from kintsugi.county_groups import county_groups
+
+lf_county_grps = county_groups()
+```
+
+State FIPS codes, names, and abbreviations
+
+```python
+from kintsugi.states import states
+
+lf_states = states()
+```
