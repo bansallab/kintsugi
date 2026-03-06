@@ -21,33 +21,35 @@ type VintageYear = Literal[
 class Vintage(NamedTuple):
     year_lb: int
     year_ub: int
+    county_fips: set[str]
 
 
-# TODO: make Vintage also have a field that is a set containing
-# county FIPS codes? Then put this in a sep module
 def get_vintage(vintage_year: VintageYear) -> Vintage:
     """
     Get info like year bounds for a given vintage year
     """
-    vintages = {
-        2016: Vintage(2010, 2016),
-        2017: Vintage(2010, 2017),
-        2018: Vintage(2010, 2018),
-        2019: Vintage(2010, 2019),
-        2020: Vintage(2010, 2020),
-        2021: Vintage(2020, 2021),
-        2022: Vintage(2020, 2022),
-        2023: Vintage(2020, 2023),
-        2024: Vintage(2020, 2024),
-    }
     vintage_year_lb = 2016
     vintage_year_ub = 2024
-    if vintage_year not in vintages:
+    if not (vintage_year_lb <= vintage_year <= vintage_year_ub):
         raise ValueError(
             f"Must choose a vintage year between {vintage_year_lb} and {vintage_year_ub}"
         )
 
-    return vintages[vintage_year]
+    data = get_dataset(f"pop/county_cc/county_pop_{vintage_year}.parquet")
+    county_fips = set(
+        pl.scan_parquet(data)
+        .select("county_fips")
+        .unique()
+        .collect()
+        .to_series()
+        .to_list()
+    )
+    if vintage_year <= 2020:
+        year_lb = 2010
+    else:
+        year_lb = 2020
+
+    return Vintage(year_lb, vintage_year, county_fips)
 
 
 @overload
