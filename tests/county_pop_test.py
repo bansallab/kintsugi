@@ -4,7 +4,12 @@ import pytest
 from pandas import DataFrame
 from pandera.polars import PolarsData
 
-from kintsugi.county_pop import CountyPopulationYear, county_age_pop, county_pop
+from kintsugi.county_pop import (
+    VintageYear,
+    county_age_pop,
+    county_pop,
+    get_vintage,
+)
 
 from .models import BasePolarsModel
 
@@ -59,55 +64,43 @@ class CountyPopulation(BasePolarsModel):
 
 @pytest.mark.parametrize(
     ("year"),
-    (
-        2010,
-        2011,
-        2012,
-        2013,
-        2014,
-        2015,
-        2016,
-        2017,
-        2018,
-        2019,
-        2020,
-        2021,
-        2022,
-        2023,
-        2024,
-    ),
+    range(2010, 2025),
 )
-def test_county_pop(year: CountyPopulationYear) -> None:
-    county_pop(year).collect().pipe(CountyPopulation.validate, lazy=True)
+@pytest.mark.parametrize(
+    ("vintage_year"),
+    range(2016, 2025),
+)
+def test_county_pop(year: int, vintage_year: VintageYear) -> None:
+    if vintage_year <= 2020:
+        year_lb = 2010
+    else:
+        year_lb = 2020
+
+    if year_lb <= year <= vintage_year:
+        county_pop(year, vintage_year=vintage_year).collect().pipe(
+            CountyPopulation.validate, lazy=True
+        )
+    else:
+        with pytest.raises(ValueError, match="^Must choose a year between"):
+            county_pop(year, vintage_year=vintage_year)
 
 
-def test_county_pop_invalid_year_exception() -> None:
-    with pytest.raises(ValueError, match="^Must choose a year in"):
-        county_pop(2000)  # pyright: ignore [reportArgumentType]
+def test_county_pop_invalid_vintage_year_exception() -> None:
+    with pytest.raises(ValueError, match="^Must choose a vintage year between"):
+        county_pop(2023, vintage_year=2000)  # pyright: ignore [reportArgumentType]
+
+
+def test_get_vintage_info() -> None:
+    with pytest.raises(ValueError, match="^Must choose a vintage year between"):
+        get_vintage(2000)  # pyright: ignore [reportArgumentType]
 
 
 @pytest.mark.parametrize(
     ("year"),
-    (
-        2010,
-        2011,
-        2012,
-        2013,
-        2014,
-        2015,
-        2016,
-        2017,
-        2018,
-        2019,
-        2020,
-        2021,
-        2022,
-        2023,
-        2024,
-    ),
+    range(2010, 2025),
 )
-def test_county_pop_as_pandas(year: CountyPopulationYear) -> None:
-    df = county_pop(year, True)
+def test_county_pop_as_pandas(year: int) -> None:
+    df = county_pop(year, as_pandas=True)
 
     assert isinstance(df, DataFrame)
 
@@ -146,54 +139,37 @@ class CountyAgePopulation(BasePolarsModel):
 
 @pytest.mark.parametrize(
     ("year"),
-    (
-        2010,
-        2011,
-        2012,
-        2013,
-        2014,
-        2015,
-        2016,
-        2017,
-        2018,
-        2019,
-        2020,
-        2021,
-        2022,
-        2023,
-        2024,
-    ),
+    range(2010, 2025),
 )
-def test_county_age_pop(year: CountyPopulationYear) -> None:
-    county_age_pop(year).collect().pipe(CountyAgePopulation.validate, lazy=True)
+@pytest.mark.parametrize(
+    ("vintage_year"),
+    range(2016, 2025),
+)
+def test_county_age_pop(year: int, vintage_year: VintageYear) -> None:
+    if vintage_year <= 2020:
+        year_lb = 2010
+    else:
+        year_lb = 2020
+
+    if year_lb <= year <= vintage_year:
+        county_age_pop(year, vintage_year=vintage_year).collect().pipe(
+            CountyAgePopulation.validate, lazy=True
+        )
+    else:
+        with pytest.raises(ValueError, match="^Must choose a year between"):
+            county_age_pop(year, vintage_year=vintage_year)
 
 
 @pytest.mark.parametrize(
     ("year"),
-    (
-        2010,
-        2011,
-        2012,
-        2013,
-        2014,
-        2015,
-        2016,
-        2017,
-        2018,
-        2019,
-        2020,
-        2021,
-        2022,
-        2023,
-        2024,
-    ),
+    range(2010, 2025),
 )
-def test_county_age_pop_as_pandas(year: CountyPopulationYear) -> None:
-    df = county_age_pop(year, True)
+def test_county_age_pop_as_pandas(year: int) -> None:
+    df = county_age_pop(year, as_pandas=True)
 
     assert isinstance(df, DataFrame)
 
 
-def test_county_age_pop_invalid_year_exception() -> None:
-    with pytest.raises(ValueError, match="^Must choose a year in"):
-        county_age_pop(2000)  # pyright: ignore [reportArgumentType]
+def test_county_age_pop_invalid_vintage_year_exception() -> None:
+    with pytest.raises(ValueError, match="^Must choose a vintage year between"):
+        county_age_pop(2023, vintage_year=2000)  # pyright: ignore [reportArgumentType]
