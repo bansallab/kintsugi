@@ -14,8 +14,8 @@ def impute_columns[T: (pl.DataFrame, pl.LazyFrame)](
     """
     Independently fill instances of `flag` (some string) in
     the given column(s) with random integers from the interval
-    [lb, ub]. To impute with a single value, specify the same
-    value for both `lb` and `ub`.
+    [lb, ub]. If `flag` is `None`, then null values are filled instead.
+    To impute with a single value, specify the same value for both `lb` and `ub`.
 
     Attempt to cast the filled column(s) to a Polars integer (default) or float type.
 
