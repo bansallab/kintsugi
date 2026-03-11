@@ -1,6 +1,6 @@
 [project]
 name = "kintsugi"
-version = "0.6.1"
+version = "0.7.0"
 description = "Commonly used datasets and functions"
 readme = "README.md"
 authors = [
