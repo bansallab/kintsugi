@@ -37,7 +37,7 @@ def test_county_groups() -> None:
     county_groups().collect().pipe(CountyGroups.validate, lazy=True)
 
 
-def test_county_pop_as_pandas() -> None:
+def test_county_groups_as_pandas() -> None:
     df = county_groups(True)
 
     assert isinstance(df, DataFrame)
