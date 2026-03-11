@@ -4,7 +4,7 @@ import pandas as pd
 import polars as pl
 
 from ._data import get_dataset
-from .county_pop import county_pop
+from .population import county_pop
 
 
 @overload
