@@ -72,7 +72,10 @@ def validate_vintage_year(year: int, vintage_year: VintageYear) -> None:
 
 # match conventions in kintsugi-data processing script
 sex_enum = pl.Enum(["tot", "male", "female"])
-race_enum = pl.Enum(["white", "black", "aian", "asian", "nhpi"])
+race_enum_no_hispanic = pl.Enum(["white", "black", "aian", "asian", "nhpi"])
+race_enum_incl_hispanic = pl.Enum(
+    ["white", "black", "aian", "asian", "nhpi", "hispanic"]
+)
 hispanic_enum = pl.Enum(["tot", "not_hispanic", "hispanic"])
 
 
@@ -275,7 +278,7 @@ def state_race_pop(
     as_pandas: bool = False,
 ) -> pl.LazyFrame | pd.DataFrame:
     """
-    State-race population estimates for select years. Specify `incl_hispanic=True` to include
+    State-race population estimates for select years. Specify `incl_hispanic_orig=True` to include
     Hispanic counts column. Uses state population by characteristics
     data: https://www.census.gov/data/tables/time-series/demo/popest/2020s-state-detail.html
     The raw files are not present in the kintsugi-data repo. Instead, we use parquet files containing a subset of columns.
@@ -381,6 +384,30 @@ def state_age_sex_pop(
     return lf
 
 
+age_grps = [
+    "tot",
+    "0-4",
+    "5-9",
+    "10-14",
+    "15-19",
+    "20-24",
+    "25-29",
+    "30-34",
+    "35-39",
+    "40-44",
+    "45-49",
+    "50-54",
+    "55-59",
+    "60-64",
+    "65-69",
+    "70-74",
+    "75-79",
+    "80-84",
+    ">=85",
+]
+age_grp_enum = pl.Enum(age_grps)
+
+
 @overload
 def county_pop(
     year: int,
@@ -403,13 +430,12 @@ def county_pop(
     County population estimates for select years. Uses county population
     by characteristics data: https://www.census.gov/data/tables/time-series/demo/popest/2020s-counties-detail.html
     The raw files are not present in the kintsugi-data repo because of their large size.
-    Instead, we use parquet files containing a subset of columns.
+    Instead, parquet files containing a subset of columns are used.
 
     It's recommended to use the latest possible vintage to get a given year's data. However,
-    you may specify a specific vintage year if, for example, you need a certain set of county
-    geographies. If `vintage_year` is `None` (by default), data for years in the range [2010, 2019]
-    are sourced from the 2020 vintage (2010-2020 data), while data for years in the range
-    [2020, 2024] are sourced from the 2024 vintage (2020-2024 data).
+    a specific vintage year may be provided. If `vintage_year` is `None` (the default), data
+    for years in the range [2010, 2019] are sourced from the 2020 vintage (2010-2020 data),
+    while data for years in the range [2020, 2024] are sourced from the 2024 vintage (2020-2024 data).
 
     Source (2024 example): https://www2.census.gov/programs-surveys/popest/datasets/2020-2024/counties/asrh/cc-est2024-alldata.csv
     """
@@ -419,12 +445,7 @@ def county_pop(
         else:
             vintage_year = 2024
 
-    vintage = get_vintage(vintage_year)
-    if not (vintage.year_lb <= year <= vintage.year_ub):
-        raise ValueError(
-            f"Must choose a year between {vintage.year_lb} and {vintage.year_ub}"
-        )
-
+    validate_vintage_year(year, vintage_year)
     data = get_dataset(f"pop/county_cc/county_pop_{vintage_year}.parquet")
     lf = (
         pl.scan_parquet(data)
@@ -464,13 +485,12 @@ def county_age_pop(
     County-age population estimates for select years. Uses county population
     by characteristics data: https://www.census.gov/data/tables/time-series/demo/popest/2020s-counties-detail.html
     The raw files are not present in the kintsugi-data repo because of their large size.
-    Instead, we use parquet files containing a subset of columns.
+    Instead, parquet files containing a subset of columns are used.
 
     It's recommended to use the latest possible vintage to get a given year's data. However,
-    you may specify a specific vintage year if, for example, you need a certain set of county
-    geographies. If `vintage_year` is `None` (by default), data for years in the range [2010, 2019]
-    are sourced from the 2020 vintage (2010-2020 data), while data for years in the range
-    [2020, 2024] are sourced from the 2024 vintage (2020-2024 data).
+    a specific vintage year may be provided. If `vintage_year` is `None` (the default), data
+    for years in the range [2010, 2019] are sourced from the 2020 vintage (2010-2020 data),
+    while data for years in the range [2020, 2024] are sourced from the 2024 vintage (2020-2024 data).
 
     Source (2024 example): https://www2.census.gov/programs-surveys/popest/datasets/2020-2024/counties/asrh/cc-est2024-alldata.csv
     """
@@ -480,12 +500,7 @@ def county_age_pop(
         else:
             vintage_year = 2024
 
-    vintage = get_vintage(vintage_year)
-    if not (vintage.year_lb <= year <= vintage.year_ub):
-        raise ValueError(
-            f"Must choose a year between {vintage.year_lb} and {vintage.year_ub}"
-        )
-
+    validate_vintage_year(year, vintage_year)
     data = get_dataset(f"pop/county_cc/county_pop_{vintage_year}.parquet")
     lf = (
         pl.scan_parquet(data)
@@ -527,13 +542,12 @@ def county_sex_pop(
     County-sex population estimates for select years. Uses county population
     by characteristics data: https://www.census.gov/data/tables/time-series/demo/popest/2020s-counties-detail.html
     The raw files are not present in the kintsugi-data repo because of their large size.
-    Instead, we use parquet files containing a subset of columns.
+    Instead, parquet files containing a subset of columns are used.
 
     It's recommended to use the latest possible vintage to get a given year's data. However,
-    you may specify a specific vintage year if, for example, you need a certain set of county
-    geographies. If `vintage_year` is `None` (by default), data for years in the range [2010, 2019]
-    are sourced from the 2020 vintage (2010-2020 data), while data for years in the range
-    [2020, 2024] are sourced from the 2024 vintage (2020-2024 data).
+    a specific vintage year may be provided. If `vintage_year` is `None` (the default), data
+    for years in the range [2010, 2019] are sourced from the 2020 vintage (2010-2020 data),
+    while data for years in the range [2020, 2024] are sourced from the 2024 vintage (2020-2024 data).
 
     Source (2024 example): https://www2.census.gov/programs-surveys/popest/datasets/2020-2024/counties/asrh/cc-est2024-alldata.csv
     """
@@ -543,12 +557,7 @@ def county_sex_pop(
         else:
             vintage_year = 2024
 
-    vintage = get_vintage(vintage_year)
-    if not (vintage.year_lb <= year <= vintage.year_ub):
-        raise ValueError(
-            f"Must choose a year between {vintage.year_lb} and {vintage.year_ub}"
-        )
-
+    validate_vintage_year(year, vintage_year)
     data = get_dataset(f"pop/county_cc/county_pop_{vintage_year}.parquet")
     lf = (
         pl.scan_parquet(data)
@@ -559,7 +568,13 @@ def county_sex_pop(
         .select(
             "state_name", "county_name", "county_fips", "year", "tot_male", "tot_female"
         )
-        .sort("county_fips")
+        .unpivot(
+            index=["state_name", "county_name", "county_fips", "year"],
+            variable_name="sex",
+            value_name="tot_pop",
+        )
+        .with_columns(sex=pl.col("sex").str.replace("tot_", "").cast(sex_enum))
+        .sort("county_fips", "sex")
     )
 
     if as_pandas:
@@ -596,17 +611,16 @@ def county_race_pop(
     as_pandas: bool = False,
 ) -> pl.LazyFrame | pd.DataFrame:
     """
-    County-race population estimates for select years. Specify `incl_hispanic=True` to include
+    County-race population estimates for select years. Specify `incl_hispanic_orig=True` to include
     Hispanic counts column. Uses county population by characteristics
     data: https://www.census.gov/data/tables/time-series/demo/popest/2020s-counties-detail.html
     The raw files are not present in the kintsugi-data repo because of their large size.
-    Instead, we use parquet files containing a subset of columns.
+    Instead, parquet files containing a subset of columns are used.
 
     It's recommended to use the latest possible vintage to get a given year's data. However,
-    you may specify a specific vintage year if, for example, you need a certain set of county
-    geographies. If `vintage_year` is `None` (by default), data for years in the range [2010, 2019]
-    are sourced from the 2020 vintage (2010-2020 data), while data for years in the range
-    [2020, 2024] are sourced from the 2024 vintage (2020-2024 data).
+    a specific vintage year may be provided. If `vintage_year` is `None` (the default), data
+    for years in the range [2010, 2019] are sourced from the 2020 vintage (2010-2020 data),
+    while data for years in the range [2020, 2024] are sourced from the 2024 vintage (2020-2024 data).
 
     Source (2024 example): https://www2.census.gov/programs-surveys/popest/datasets/2020-2024/counties/asrh/cc-est2024-alldata.csv
     """
@@ -616,12 +630,7 @@ def county_race_pop(
         else:
             vintage_year = 2024
 
-    vintage = get_vintage(vintage_year)
-    if not (vintage.year_lb <= year <= vintage.year_ub):
-        raise ValueError(
-            f"Must choose a year between {vintage.year_lb} and {vintage.year_ub}"
-        )
-
+    validate_vintage_year(year, vintage_year)
     data = get_dataset(f"pop/county_cc/county_pop_{vintage_year}.parquet")
     lf = (
         pl.scan_parquet(data)
@@ -663,11 +672,20 @@ def county_race_pop(
             "nhpi",
             "hispanic",
         )
-        .sort("county_fips")
     )
 
     if not incl_hispanic_orig:
         lf = lf.drop("hispanic")
+
+    lf = (
+        lf.unpivot(
+            index=["state_name", "county_name", "county_fips", "year"],
+            variable_name="race",
+            value_name="tot_pop",
+        )
+        .cast({"race": race_enum_incl_hispanic})
+        .sort("county_fips", "race")
+    )
 
     if as_pandas:
         return lf.collect().to_pandas()
@@ -697,13 +715,12 @@ def county_age_sex_pop(
     County-age-sex population estimates for select years. Uses county population
     by characteristics data: https://www.census.gov/data/tables/time-series/demo/popest/2020s-counties-detail.html
     The raw files are not present in the kintsugi-data repo because of their large size.
-    Instead, we use parquet files containing a subset of columns.
+    Instead, parquet files containing a subset of columns are used.
 
     It's recommended to use the latest possible vintage to get a given year's data. However,
-    you may specify a specific vintage year if, for example, you need a certain set of county
-    geographies. If `vintage_year` is `None` (by default), data for years in the range [2010, 2019]
-    are sourced from the 2020 vintage (2010-2020 data), while data for years in the range
-    [2020, 2024] are sourced from the 2024 vintage (2020-2024 data).
+    a specific vintage year may be provided. If `vintage_year` is `None` (the default), data
+    for years in the range [2010, 2019] are sourced from the 2020 vintage (2010-2020 data),
+    while data for years in the range [2020, 2024] are sourced from the 2024 vintage (2020-2024 data).
 
     Source (2024 example): https://www2.census.gov/programs-surveys/popest/datasets/2020-2024/counties/asrh/cc-est2024-alldata.csv
     """
@@ -713,12 +730,7 @@ def county_age_sex_pop(
         else:
             vintage_year = 2024
 
-    vintage = get_vintage(vintage_year)
-    if not (vintage.year_lb <= year <= vintage.year_ub):
-        raise ValueError(
-            f"Must choose a year between {vintage.year_lb} and {vintage.year_ub}"
-        )
-
+    validate_vintage_year(year, vintage_year)
     data = get_dataset(f"pop/county_cc/county_pop_{vintage_year}.parquet")
     lf = (
         pl.scan_parquet(data)
