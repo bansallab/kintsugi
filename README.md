@@ -39,13 +39,13 @@ counties = county_geo(2024)
 states = state_geo(2024)
 ```
 
-County and county-age population counts
+State and county population data, stratified by several different variables:
 
 ```python
-from kintsugi.county_pop import county_pop, county_age_pop
+from kintsugi.population import county_pop, state_age_pop
 
 lf_county_pop = county_pop(2024)
-lf_county_age_pop = county_age_pop(2024)
+lf_state_age_pop = state_age_pop(2024)
 ```
 
 Low-population county groups
