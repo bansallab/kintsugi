@@ -4,13 +4,13 @@ import pytest
 from pandas import DataFrame
 from pandera.polars import PolarsData
 
-from kintsugi.county_neighbors import (
+from kintsugi.geo import ShapefileYear
+from kintsugi.neighbors import (
     NeighborsYear,
     county_adj_list,
     county_neighbors,
     county_neighbors_from_shapefile,
 )
-from kintsugi.geo import ShapefileYear
 
 from .models import BasePolarsModel
 

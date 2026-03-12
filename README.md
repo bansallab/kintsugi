@@ -25,7 +25,7 @@ Currently supported datasets:
 County neighbors
 
 ```python
-from kintsugi.county_neighbors import county_neighbors
+from kintsugi.neighbors import county_neighbors
 
 neighbors = county_neighbors()
 ```
@@ -59,7 +59,15 @@ lf_county_grps = county_groups()
 State FIPS codes, names, and abbreviations
 
 ```python
-from kintsugi.states import states
+from kintsugi.metadata import states
 
 lf_states = states()
+```
+
+Year-specific county FIPS codes
+
+```python
+from kintsugi.metadata import counties
+
+lf_counties = counties(2020)
 ```

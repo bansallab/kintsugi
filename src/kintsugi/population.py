@@ -1,4 +1,4 @@
-from typing import Literal, NamedTuple, overload
+from typing import Literal, overload
 
 import pandas as pd
 import polars as pl
@@ -18,12 +18,6 @@ type VintageYear = Literal[
 ]
 
 
-# class Vintage(NamedTuple):
-#     year_lb: int
-#     year_ub: int
-#     county_fips: set[str]
-
-
 def validate_vintage_year(year: int, vintage_year: VintageYear) -> None:
     """Validate year against vintage_year"""
     vintage_year_lb = 2016
@@ -41,34 +35,6 @@ def validate_vintage_year(year: int, vintage_year: VintageYear) -> None:
     if not (year_lb <= year <= vintage_year):
         raise ValueError(f"Must choose a year between {year_lb} and {vintage_year}")
 
-
-# def _get_vintage(vintage_year: VintageYear) -> Vintage:
-#     """Get info like year bounds for a given vintage year."""
-#     vintage_year_lb = 2016
-#     vintage_year_ub = 2024
-#     if not (vintage_year_lb <= vintage_year <= vintage_year_ub):
-#         raise ValueError(
-#             f"Must choose a vintage year between {vintage_year_lb} and {vintage_year_ub}"
-#         )
-#
-#     data = get_dataset(f"pop/county_cc/county_pop_{vintage_year}.parquet")
-#     county_fips = set(
-#         pl.scan_parquet(data)
-#         .select("county_fips")
-#         .unique()
-#         .collect()
-#         .to_series()
-#         .to_list()
-#     )
-#     if vintage_year <= 2020:
-#         year_lb = 2010
-#     else:
-#         year_lb = 2020
-#
-#     return Vintage(year_lb, vintage_year, county_fips)
-
-
-# TODO: should docstrings have info on the schema?
 
 # match conventions in kintsugi-data processing script
 sex_enum = pl.Enum(["tot", "male", "female"])
