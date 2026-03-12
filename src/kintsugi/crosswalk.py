@@ -5,7 +5,242 @@ import polars as pl
 
 from ._data import get_dataset
 
-num_county_subs = 169
+# num_county_subs = 169
+
+
+@overload
+def puma_2010_2020(as_pandas: Literal[False] = ...) -> pl.LazyFrame: ...
+
+
+@overload
+def puma_2010_2020(as_pandas: Literal[True]) -> pd.DataFrame: ...
+
+
+def puma_2010_2020(as_pandas: bool = False) -> pl.LazyFrame | pd.DataFrame:
+    """
+    Crosswalk data between 2010 (effective 2012) and 2020 (effective 2022) PUMAs.
+
+    `wt_PUMA_2010_to_2020_MCDC` describes the proportion of the 2010 PUMA's population
+    that lives in the 2020 PUMA. Similarly, `wt_PUMA_2020_to_2010_MCDC` describes the
+    proportion of the 2020 PUMA's population that lives in the 2010 PUMA.
+
+    Sourced from Missouri Census Data Center (MCDC). Alternative source exists from
+    Integrated Public Use Microdata Series (IPUMS).
+
+    - Source (MCDC): https://mcdc.missouri.edu/geography/PUMAs.html
+        - See: https://mcdc.missouri.edu/data/corrlst/puma2010-to-puma2020.csv
+    - Source (IPUMS): https://usa.ipums.org/usa/volii/pumas20.shtml
+        - See: https://usa.ipums.org/usa/resources/volii/PUMA2010_PUMA2020_crosswalk.xls
+    """
+    data = get_dataset("crosswalk/PUMA/puma2010-to-puma2020.csv")
+    lf = (
+        pl.scan_csv(
+            data,
+            skip_rows_after_header=1,
+            schema_overrides={
+                "state": pl.String,
+                "puma12": pl.String,
+                "puma22": pl.String,
+                "afact": pl.Float64,
+                "AFACT2": pl.Float64,
+            },
+        )
+        .select(
+            "state",
+            "puma22",
+            "puma12",
+            "afact",  # portion of earlier PUMA's population living in later PUMA
+            "AFACT2",  # portion of later PUMA's population living in the earlier PUMA
+        )
+        .rename(
+            {
+                "afact": "wt_PUMA_2010_to_2020_MCDC",
+                "AFACT2": "wt_PUMA_2020_to_2010_MCDC",
+            }
+        )
+        .with_columns(
+            (pl.col(col).str.zfill(5).alias(col) for col in ["puma12", "puma22"]),
+            state=pl.col("state").str.zfill(2),
+        )
+        .filter(pl.col("state").is_between(pl.lit("01"), pl.lit("56")))
+        .with_columns(
+            puma_geoid_2020=pl.col("state") + pl.col("puma22"),
+            puma_geoid_2010=pl.col("state") + pl.col("puma12"),
+        )
+        .select(
+            "puma_geoid_2010",
+            "puma_geoid_2020",
+            "wt_PUMA_2010_to_2020_MCDC",
+            "wt_PUMA_2020_to_2010_MCDC",
+        )
+        .sort("puma_geoid_2010", "puma_geoid_2020")
+    )
+
+    # NOTE: implementation using alternate data source
+    # lf_IPUMS = (
+    #     pl.read_excel(
+    #         PUMS_DATA / "PUMA2010_PUMA2020_crosswalk.xls",
+    #         # NOTE: pPUMA20_Pop20 = "Estimated percent of the 2020 PUMA's 2020 population that lies in the area of intersection"
+    #         columns=[
+    #             "GEOID10",
+    #             "GEOID20",
+    #             "pPUMA20_Pop20",
+    #             "pPUMA10_Pop20",
+    #         ],
+    #     )
+    #     .lazy()
+    #     .rename(
+    #         {
+    #             "GEOID20": "puma_geoid_2020",
+    #             "GEOID10": "puma_geoid_2010",
+    #             "pPUMA20_Pop20": "wt_PUMA_2020_to_2010",
+    #             "pPUMA10_Pop20": "wt_PUMA_2010_to_2020",
+    #         }
+    #     )
+    #     .with_columns(
+    #         (pl.col(col) / 100.0).alias(col)
+    #         for col in ["wt_PUMA_2020_to_2010", "wt_PUMA_2010_to_2020"]
+    #     )
+    #     .select(
+    #         "puma_geoid_2020",
+    #         "puma_geoid_2010",
+    #         "wt_PUMA_2020_to_2010",
+    #         "wt_PUMA_2010_to_2020",
+    #     )
+    #     .sort("puma_geoid_2020", "puma_geoid_2010")
+    # )
+
+    if as_pandas:
+        return lf.collect().to_pandas()
+
+    return lf
+
+
+# @overload
+# def crosswalk_puma_2010_county_2020(
+#     as_pandas: Literal[False] = ...,
+# ) -> pl.LazyFrame: ...
+#
+#
+# @overload
+# def crosswalk_puma_2010_county_2020(as_pandas: Literal[True]) -> pd.DataFrame: ...
+#
+#
+# def crosswalk_puma_2010_county_2020(
+#     as_pandas: bool = False,
+# ) -> pl.LazyFrame | pd.DataFrame:
+#     """
+#     Crosswalk data between 2010 PUMAs and 2020 counties.
+#
+#     Note: uses new CT counties
+#
+#     Source: MCDC 2022 Geocorr
+#         - Form query: https://mcdc.missouri.edu/cgi-bin/broker?_PROGRAM=apps.geocorr2022.sas&_SERVICE=MCDC_long&_debug=0&state=Mo29&state=Al01&state=Ak02&state=Az04&state=Ar05&state=Ca06&state=Co08&state=Ct09&state=De10&state=Dc11&state=Fl12&state=Ga13&state=Hi15&state=Id16&state=Il17&state=In18&state=Ia19&state=Ks20&state=Ky21&state=La22&state=Me23&state=Md24&state=Ma25&state=Mi26&state=Mn27&state=Ms28&state=Mt30&state=Ne31&state=Nv32&state=Nh33&state=Nj34&state=Nm35&state=Ny36&state=Nc37&state=Nd38&state=Oh39&state=Ok40&state=Or41&state=Pa42&state=Pr72&state=Ri44&state=Sc45&state=Sd46&state=Tn47&state=Tx48&state=Ut49&state=Vt50&state=Va51&state=Wa53&state=Wv54&state=Wi55&state=Wy56&g1_=puma12&g2_=county&wtvar=pop20&nozerob=1&fileout=1&filefmt=csv&lstfmt=html&title=&afacts2=on&counties=&metros=&places=&oropt=&latitude=&longitude=&distance=&kiloms=0&locname=
+#     """
+#     lf = (
+#         pl.read_csv(
+#             CROSSWALK_DATA / "PUMA/geocorr_puma_2010_to_county_2020_with_afact2.csv",
+#             encoding="iso-8859-1",
+#             skip_rows_after_header=1,
+#             columns=[
+#                 "state",
+#                 "puma12",
+#                 "county",
+#                 "afact",
+#                 "afact2",
+#             ],
+#             schema_overrides={
+#                 "state": pl.String,
+#                 "puma12": pl.String,
+#                 "county": pl.String,
+#                 "afact": pl.String,
+#                 "afact2": pl.String,
+#             },
+#         )
+#         .lazy()
+#         .rename({"county": "county_fips"})
+#         .with_columns(
+#             puma_geoid=pl.col("state") + pl.col("puma12"),
+#             wt_PUMA_2010_to_county=pl.col("afact").str.strip_chars().cast(pl.Float64),
+#             wt_county_to_PUMA_2010=pl.col("afact2").str.strip_chars().cast(pl.Float64),
+#         )
+#         .filter(
+#             pl.col("state").is_between(pl.lit("01"), pl.lit("56")),
+#             # pl.col("wt_PUMA_2010_to_county") != 0
+#         )
+#         .select(
+#             "puma_geoid",
+#             "county_fips",
+#             "wt_PUMA_2010_to_county",
+#             "wt_county_to_PUMA_2010",
+#         )
+#         .sort("puma_geoid", "county_fips")
+#     )
+#
+#     if as_pandas:
+#         return lf.collect().to_pandas()
+#
+#     return lf
+
+
+@overload
+def county_to_zip(year: int, as_pandas: Literal[False] = ...) -> pl.LazyFrame: ...
+
+
+@overload
+def county_to_zip(year: int, as_pandas: Literal[True]) -> pd.DataFrame: ...
+
+
+def county_to_zip(year: int, as_pandas: bool = False) -> pl.LazyFrame | pd.DataFrame:
+    """
+    County-to-zip residential ratio weights.
+
+    Use these weights to crosswalk zip-to-county via a weighted mean.
+    2012-2022 data use 2010 Census geographies. 2023-present data use
+    2020 Census geographies. All years use quarter 4 data.
+
+    Source: https://www.huduser.gov/portal/datasets/usps_crosswalk.html
+    """
+    if not (2016 <= year <= 2025):
+        raise ValueError("Must choose a year between 2016 and 2025")
+
+    data = get_dataset(f"crosswalk/county_to_zip/county_to_zip_{year}.parquet")
+    lf = pl.scan_parquet(data)
+
+    if as_pandas:
+        return lf.collect().to_pandas()
+
+    return lf
+
+
+@overload
+def zip_to_county(year: int, as_pandas: Literal[False] = ...) -> pl.LazyFrame: ...
+
+
+@overload
+def zip_to_county(year: int, as_pandas: Literal[True]) -> pd.DataFrame: ...
+
+
+def zip_to_county(year: int, as_pandas: bool = False) -> pl.LazyFrame | pd.DataFrame:
+    """
+    Zip-to-county residential ratio weights.
+
+    Use these weights to crosswalk counts data from zip-to-county
+    2012-2022 data use 2010 Census geographies. 2023-present data use
+    2020 Census geographies. All years use quarter 4 data.
+
+    Source: https://www.huduser.gov/portal/datasets/usps_crosswalk.html
+    """
+    if not (2016 <= year <= 2025):
+        raise ValueError("Must choose a year between 2016 and 2025")
+
+    data = get_dataset(f"crosswalk/zip_to_county/zip_to_county_{year}.parquet")
+    lf = pl.scan_parquet(data)
+
+    if as_pandas:
+        return lf.collect().to_pandas()
+
+    return lf
 
 
 # @overload
@@ -176,255 +411,3 @@ num_county_subs = 169
 #         return lf.collect().to_pandas()
 #
 #     return lf
-
-
-# @overload
-# def crosswalk_puma_versions() -> pl.LazyFrame: ...
-#
-#
-# @overload
-# def crosswalk_puma_versions(as_pandas: Literal[False]) -> pl.LazyFrame: ...
-#
-#
-# @overload
-# def crosswalk_puma_versions(as_pandas: Literal[True]) -> pd.DataFrame: ...
-#
-#
-# def crosswalk_puma_versions(as_pandas: bool = False) -> pl.LazyFrame | pd.DataFrame:
-#     """
-#     Crosswalk data between 2010 (effective 2012) and 2020 (effective 2022) PUMAs.
-#
-#     Sourced from Missouri Census Data Center (MCDC). Alternative source exists from
-#     Integrated Public Use Microdata Series (IPUMS).
-#
-#     - Source (MCDC): https://mcdc.missouri.edu/geography/PUMAs.html
-#         - See: https://mcdc.missouri.edu/data/corrlst/puma2010-to-puma2020.csv
-#     - Source (IPUMS): https://usa.ipums.org/usa/volii/pumas20.shtml
-#         - See: https://usa.ipums.org/usa/resources/volii/PUMA2010_PUMA2020_crosswalk.xls
-#     """
-#     lf = (
-#         pl.scan_csv(
-#             CROSSWALK_DATA / "PUMA/puma2010-to-puma2020.csv",
-#             skip_rows_after_header=1,
-#             schema_overrides={
-#                 "state": pl.String,
-#                 "puma12": pl.String,
-#                 "puma22": pl.String,
-#                 "afact": pl.Float64,
-#                 "AFACT2": pl.Float64,
-#             },
-#         )
-#         .select(
-#             "state",
-#             "puma22",
-#             "puma12",
-#             "afact",  # portion of earlier PUMA's population living in later PUMA
-#             "AFACT2",  # portion of later PUMA's population living in the earlier PUMA
-#         )
-#         .rename(
-#             {
-#                 "afact": "wt_PUMA_2010_to_2020_MCDC",
-#                 "AFACT2": "wt_PUMA_2020_to_2010_MCDC",
-#             }
-#         )
-#         .with_columns(
-#             puma_geoid_2020=pl.col("state").str.zfill(2)
-#             + pl.col("puma22").str.zfill(5),
-#             puma_geoid_2010=pl.col("state").str.zfill(2)
-#             + pl.col("puma12").str.zfill(5),
-#         )
-#         .select(
-#             "puma_geoid_2010",
-#             "puma_geoid_2020",
-#             "wt_PUMA_2010_to_2020_MCDC",
-#             "wt_PUMA_2020_to_2010_MCDC",
-#         )
-#         .filter(
-#             pl.col("puma_geoid_2010")
-#             .str.slice(0, 2)
-#             .is_between(pl.lit("01"), pl.lit("56")),
-#             pl.col("puma_geoid_2020")
-#             .str.slice(0, 2)
-#             .is_between(pl.lit("01"), pl.lit("56")),
-#             # pl.col("wt_PUMA_2020_to_2010") != 0.0,
-#         )
-#         .sort("puma_geoid_2010", "puma_geoid_2020")
-#     )
-#
-#     # lf_IPUMS = (
-#     #     pl.read_excel(
-#     #         PUMS_DATA / "PUMA2010_PUMA2020_crosswalk.xls",
-#     #         # NOTE: pPUMA20_Pop20 = "Estimated percent of the 2020 PUMA's 2020 population that lies in the area of intersection"
-#     #         columns=[
-#     #             "GEOID10",
-#     #             "GEOID20",
-#     #             "pPUMA20_Pop20",
-#     #             "pPUMA10_Pop20",
-#     #         ],
-#     #     )
-#     #     .lazy()
-#     #     .rename(
-#     #         {
-#     #             "GEOID20": "puma_geoid_2020",
-#     #             "GEOID10": "puma_geoid_2010",
-#     #             "pPUMA20_Pop20": "wt_PUMA_2020_to_2010",
-#     #             "pPUMA10_Pop20": "wt_PUMA_2010_to_2020",
-#     #         }
-#     #     )
-#     #     .with_columns(
-#     #         (pl.col(col) / 100.0).alias(col)
-#     #         for col in ["wt_PUMA_2020_to_2010", "wt_PUMA_2010_to_2020"]
-#     #     )
-#     #     .select(
-#     #         "puma_geoid_2020",
-#     #         "puma_geoid_2010",
-#     #         "wt_PUMA_2020_to_2010",
-#     #         "wt_PUMA_2010_to_2020",
-#     #     )
-#     #     .sort("puma_geoid_2020", "puma_geoid_2010")
-#     # )
-#
-#     if as_pandas:
-#         return lf.collect().to_pandas()
-#
-#     return lf
-
-
-# @overload
-# def crosswalk_puma_2010_county_2020() -> pl.LazyFrame: ...
-#
-#
-# @overload
-# def crosswalk_puma_2010_county_2020(as_pandas: Literal[False]) -> pl.LazyFrame: ...
-#
-#
-# @overload
-# def crosswalk_puma_2010_county_2020(as_pandas: Literal[True]) -> pd.DataFrame: ...
-#
-#
-# def crosswalk_puma_2010_county_2020(
-#     as_pandas: bool = False,
-# ) -> pl.LazyFrame | pd.DataFrame:
-#     """
-#     Crosswalk data between 2010 PUMAs and 2020 counties.
-#
-#     Note: uses new CT counties
-#
-#     Source: MCDC 2022 Geocorr
-#         - Form query: https://mcdc.missouri.edu/cgi-bin/broker?_PROGRAM=apps.geocorr2022.sas&_SERVICE=MCDC_long&_debug=0&state=Mo29&state=Al01&state=Ak02&state=Az04&state=Ar05&state=Ca06&state=Co08&state=Ct09&state=De10&state=Dc11&state=Fl12&state=Ga13&state=Hi15&state=Id16&state=Il17&state=In18&state=Ia19&state=Ks20&state=Ky21&state=La22&state=Me23&state=Md24&state=Ma25&state=Mi26&state=Mn27&state=Ms28&state=Mt30&state=Ne31&state=Nv32&state=Nh33&state=Nj34&state=Nm35&state=Ny36&state=Nc37&state=Nd38&state=Oh39&state=Ok40&state=Or41&state=Pa42&state=Pr72&state=Ri44&state=Sc45&state=Sd46&state=Tn47&state=Tx48&state=Ut49&state=Vt50&state=Va51&state=Wa53&state=Wv54&state=Wi55&state=Wy56&g1_=puma12&g2_=county&wtvar=pop20&nozerob=1&fileout=1&filefmt=csv&lstfmt=html&title=&afacts2=on&counties=&metros=&places=&oropt=&latitude=&longitude=&distance=&kiloms=0&locname=
-#     """
-#     lf = (
-#         pl.read_csv(
-#             CROSSWALK_DATA / "PUMA/geocorr_puma_2010_to_county_2020_with_afact2.csv",
-#             encoding="iso-8859-1",
-#             skip_rows_after_header=1,
-#             columns=[
-#                 "state",
-#                 "puma12",
-#                 "county",
-#                 "afact",
-#                 "afact2",
-#             ],
-#             schema_overrides={
-#                 "state": pl.String,
-#                 "puma12": pl.String,
-#                 "county": pl.String,
-#                 "afact": pl.String,
-#                 "afact2": pl.String,
-#             },
-#         )
-#         .lazy()
-#         .rename({"county": "county_fips"})
-#         .with_columns(
-#             puma_geoid=pl.col("state") + pl.col("puma12"),
-#             wt_PUMA_2010_to_county=pl.col("afact").str.strip_chars().cast(pl.Float64),
-#             wt_county_to_PUMA_2010=pl.col("afact2").str.strip_chars().cast(pl.Float64),
-#         )
-#         .filter(
-#             pl.col("state").is_between(pl.lit("01"), pl.lit("56")),
-#             # pl.col("wt_PUMA_2010_to_county") != 0
-#         )
-#         .select(
-#             "puma_geoid",
-#             "county_fips",
-#             "wt_PUMA_2010_to_county",
-#             "wt_county_to_PUMA_2010",
-#         )
-#         .sort("puma_geoid", "county_fips")
-#     )
-#
-#     if as_pandas:
-#         return lf.collect().to_pandas()
-#
-#     return lf
-
-
-# TODO: need to settle on some convention for the files:
-# e.g., always use Q4 for each year? Q3 used because that was latest at the time when I pulled data
-# Available on a quarterly release cycle from HUD:
-# - 2010-Q1 - 2011-Q4 data use 2000 Census geographies
-# - 2012-Q1 - 2022-Q4 data use 2010 Census geographies
-# - 2023-Q1 - present data use 2020 Census geographies
-# TODO: note that I can only find one instance of using old version of this function
-# in other proj. Although it used zip-to-county file instead of county-to-zip file,
-# the weights weren't even used (only used to map zip to county)
-
-
-@overload
-def county_to_zip(year: int, as_pandas: Literal[False] = ...) -> pl.LazyFrame: ...
-
-
-@overload
-def county_to_zip(year: int, as_pandas: Literal[True]) -> pd.DataFrame: ...
-
-
-def county_to_zip(year: int, as_pandas: bool = False) -> pl.LazyFrame | pd.DataFrame:
-    """
-    County-to-zip residential ratio weights.
-
-    Use these weights to crosswalk zip-to-county via a weighted mean.
-    2012-2022 data use 2010 Census geographies. 2023-present data use
-    2020 Census geographies. All years use quarter 4 data.
-
-    Source: https://www.huduser.gov/portal/datasets/usps_crosswalk.html
-    """
-    if not (2016 <= year <= 2025):
-        raise ValueError("Must choose a year between 2016 and 2025")
-
-    data = get_dataset(f"crosswalk/county_to_zip/county_to_zip_{year}.parquet")
-    lf = pl.scan_parquet(data)
-
-    if as_pandas:
-        return lf.collect().to_pandas()
-
-    return lf
-
-
-@overload
-def zip_to_county(year: int, as_pandas: Literal[False] = ...) -> pl.LazyFrame: ...
-
-
-@overload
-def zip_to_county(year: int, as_pandas: Literal[True]) -> pd.DataFrame: ...
-
-
-def zip_to_county(year: int, as_pandas: bool = False) -> pl.LazyFrame | pd.DataFrame:
-    """
-    Zip-to-county residential ratio weights.
-
-    Use these weights to crosswalk counts data from zip-to-county
-    2012-2022 data use 2010 Census geographies. 2023-present data use
-    2020 Census geographies. All years use quarter 4 data.
-
-    Source: https://www.huduser.gov/portal/datasets/usps_crosswalk.html
-    """
-    if not (2016 <= year <= 2025):
-        raise ValueError("Must choose a year between 2016 and 2025")
-
-    data = get_dataset(f"crosswalk/zip_to_county/zip_to_county_{year}.parquet")
-    lf = pl.scan_parquet(data)
-
-    if as_pandas:
-        return lf.collect().to_pandas()
-
-    return lf

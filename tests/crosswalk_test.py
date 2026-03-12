@@ -3,15 +3,38 @@ import polars as pl
 import pytest
 from pandas import DataFrame
 
-from kintsugi.crosswalk import county_to_zip, zip_to_county
+from kintsugi.crosswalk import county_to_zip, puma_2010_2020, zip_to_county
 
 from .models import BasePolarsModel
+
+
+class PUMAVersionCrosswalk(BasePolarsModel):
+    puma_geoid_2010: pl.String  # pyright: ignore [reportUninitializedInstanceVariable]
+    puma_geoid_2020: pl.String  # pyright: ignore [reportUninitializedInstanceVariable]
+    wt_PUMA_2010_to_2020_MCDC: pl.Float64  # pyright: ignore [reportUninitializedInstanceVariable]
+    wt_PUMA_2020_to_2010_MCDC: pl.Float64  # pyright: ignore [reportUninitializedInstanceVariable]
+
+    class Config:  # pyright: ignore [reportIncompatibleVariableOverride]
+        unique: list[str] = ["puma_geoid_2010", "puma_geoid_2020"]
+
+
+def test_puma_2010_2020() -> None:
+    puma_2010_2020().collect().pipe(PUMAVersionCrosswalk.validate, lazy=True)
+
+
+def test_puma_2010_2020_as_pandas() -> None:
+    df = puma_2010_2020(as_pandas=True)
+
+    assert isinstance(df, DataFrame)
 
 
 class ZipCountyCrosswalk(BasePolarsModel):
     zip_code: pl.String  # pyright: ignore [reportUninitializedInstanceVariable]
     county_fips: pl.String  # pyright: ignore [reportUninitializedInstanceVariable]
     res_ratio: pl.Float64 = pa.Field(ge=0)  # pyright: ignore [reportAny]
+
+    class Config:  # pyright: ignore [reportIncompatibleVariableOverride]
+        unique: list[str] = ["zip_code", "county_fips"]
 
 
 @pytest.mark.parametrize(
