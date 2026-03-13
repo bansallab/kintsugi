@@ -12,12 +12,36 @@ from requests.adapters import HTTPAdapter, Retry
 logger = logging.getLogger("kintsugi")
 logger.addHandler(logging.NullHandler())
 
-BASE_URL = "https://raw.githubusercontent.com/winter-again/kintsugi-data/main/data"
+BASE_URL = "https://raw.githubusercontent.com/bansallab/kintsugi-data/main/data"
 DATASETS = {
     "county_neighbors/county_adjacency2010.txt": "7edda309ad38a4dfc6a6c6c30e1753e5490b9c8a3aa4563188841989b4fe9a96",
     "county_neighbors/county_adjacency2023.txt": "2dbf9a8bae1b7c50db3a9db4864b073d2423c3e6e63518c97d649453e2809843",
     "county_neighbors/county_adjacency2024.txt": "20cffeb48ba46972fb949c453d3fbf62620115039c45c88bc80c094885650816",
     "county_neighbors/county_adjacency2025.txt": "27046a5f09f66205fd9869afbfb6dcae744e1c9b85cb19dd767c580211fb4575",
+    "crosswalk/county/ct_cou_to_cousub_crosswalk.txt": "13ad002564e30e6dcd1df112fdaa985f2cd0cdb908f7f3017cd2723db294cff8",
+    "crosswalk/county/sub-est2024_9.csv": "e5bd2cb1b10cf12d741572eef9e8eff19a1f6c5e08eb910d6f44f299c7ca83df",
+    "crosswalk/county_to_zip/county_to_zip_2016.parquet": "f13d79b059b272c9ac4ff02dbe4e0e26d56acffad837adeb0f2d86d3101fd9ad",
+    "crosswalk/county_to_zip/county_to_zip_2017.parquet": "009141988a3b902179d6beed80260faf2474a4cda8d6af0667d88ab4f0140b0b",
+    "crosswalk/county_to_zip/county_to_zip_2018.parquet": "697425d6ffba4c8f95c80a961814d2291f61507336010349a4d78c10ce5cfdba",
+    "crosswalk/county_to_zip/county_to_zip_2019.parquet": "3a06ca1a4d21638a4d014cbb4bc29b7d6b254a937dab1536058152d226073d62",
+    "crosswalk/county_to_zip/county_to_zip_2020.parquet": "06cb2bfa55085d9c5f0f652628a61d1bf64fe14ea190df5bdc361844f5204250",
+    "crosswalk/county_to_zip/county_to_zip_2021.parquet": "fdd59a6b8ab06a534d1c9c4765101105ce8bc08d9685eb9441c58701bffd96ae",
+    "crosswalk/county_to_zip/county_to_zip_2022.parquet": "c3875e66bff03ff71ad73b89277fc892a294a5d71be08b4eb4ac2c431d715b83",
+    "crosswalk/county_to_zip/county_to_zip_2023.parquet": "2f7c7564092c43d3a964ecf76bc61083916186d140c3cabed63aba5f91b56f1a",
+    "crosswalk/county_to_zip/county_to_zip_2024.parquet": "907321abfa45437a13d4cfa9047b687456e883a096b863c8874d168fb8cc57c0",
+    "crosswalk/county_to_zip/county_to_zip_2025.parquet": "e5008518558a4aca7ae2d40226f56bdcdcdf01bdb3879241a0b8d69a14097239",
+    "crosswalk/PUMA/geocorr_puma_2010_to_county_2020_with_afact2.csv": "b66f23aa27be3daf1f6456607478848df3383d4c7111d6f935f792fc9542b807",
+    "crosswalk/PUMA/puma2010-to-puma2020.csv": "bc6d0116aa39ea3b2af85095b49bac00f4612f591d2f4684cc2cc872c210a666",
+    "crosswalk/zip_to_county/zip_to_county_2016.parquet": "982913988b4915e9c4787d4f639985635cae938b447944e0ef04868bb5c784d1",
+    "crosswalk/zip_to_county/zip_to_county_2017.parquet": "e8dd16dcee07b3a6b52a30c49157d707a1f1e8f1cabf7da126cb094e88cfd0eb",
+    "crosswalk/zip_to_county/zip_to_county_2018.parquet": "8ab399f97bb8d81eaabca7adf512e801c8958745fe6f0e82992313fbcfaaa942",
+    "crosswalk/zip_to_county/zip_to_county_2019.parquet": "78ac9cdda7c5e00b82315ceaece4f3722da905e2ec4f68774a135d327c257435",
+    "crosswalk/zip_to_county/zip_to_county_2020.parquet": "17f518b2a6de5ee58b134c0dc5fbf10f6d48c45b14fdbfcfe58a4269e08eaee2",
+    "crosswalk/zip_to_county/zip_to_county_2021.parquet": "655c6ce8b257e942ac1c7dfa068d93ad2a1f139c9cd0c110efbce752ab27cea4",
+    "crosswalk/zip_to_county/zip_to_county_2022.parquet": "9f125642aeb5aba3c8f2bdf616c186f975fc6afc1b5543d55204ad9b2a10b252",
+    "crosswalk/zip_to_county/zip_to_county_2023.parquet": "89f50d28acb226a5777ededc1f8301dc1f028c65dd04b860355d23efe24b89c5",
+    "crosswalk/zip_to_county/zip_to_county_2024.parquet": "8d76e09fa52923c0901c0afad26ba2d32075210bb0ab5b82caa14ce5465b3d80",
+    "crosswalk/zip_to_county/zip_to_county_2025.parquet": "2683272f9759646d0a6234de06076f274852b85fcd2fd9e3d2dfcb3aa10def80",
     "geo/cb_2020_us_county_5m.zip": "187e7118304428e5450083beb375e67c2c516c58a01ce52db95aaf24f18df3ba",
     "geo/cb_2020_us_state_5m.zip": "aedc60e0d1924a9030ee6d39ff0ed27ad7d1b0bc86807ea809391a6b9008ffb3",
     "geo/cb_2024_us_county_5m.zip": "a867f8734059b45d1d54a0ba56189dd7e73c42eb451418fa56de44c35232614b",

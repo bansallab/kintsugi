@@ -20,7 +20,7 @@ pip install git+ssh://git@github.com/winter-again/kintsugi
 
 ## Datasets
 
-Currently supported datasets:
+Currently supported datasets. Where appropriate, you can pass `as_pandas=True` to get a pandas dataframe back:
 
 County neighbors
 
@@ -70,4 +70,12 @@ Year-specific county FIPS codes
 from kintsugi.metadata import counties
 
 lf_counties = counties(2020)
+```
+
+Crosswalk 2010 PUMAs to 2020 counties
+
+```python
+from kintsugi.crosswalk import puma_2010_county_2020
+
+crosswalk = puma_2010_county_2020()
 ```
