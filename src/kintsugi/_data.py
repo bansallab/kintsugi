@@ -28,6 +28,7 @@ DATASETS = {
     "crosswalk/county_to_zip/county_to_zip_2023.parquet": "2f7c7564092c43d3a964ecf76bc61083916186d140c3cabed63aba5f91b56f1a",
     "crosswalk/county_to_zip/county_to_zip_2024.parquet": "907321abfa45437a13d4cfa9047b687456e883a096b863c8874d168fb8cc57c0",
     "crosswalk/county_to_zip/county_to_zip_2025.parquet": "e5008518558a4aca7ae2d40226f56bdcdcdf01bdb3879241a0b8d69a14097239",
+    "crosswalk/PUMA/geocorr_puma_2010_to_county_2020_with_afact2.csv": "b66f23aa27be3daf1f6456607478848df3383d4c7111d6f935f792fc9542b807",
     "crosswalk/PUMA/puma2010-to-puma2020.csv": "bc6d0116aa39ea3b2af85095b49bac00f4612f591d2f4684cc2cc872c210a666",
     "crosswalk/zip_to_county/zip_to_county_2016.parquet": "982913988b4915e9c4787d4f639985635cae938b447944e0ef04868bb5c784d1",
     "crosswalk/zip_to_county/zip_to_county_2017.parquet": "e8dd16dcee07b3a6b52a30c49157d707a1f1e8f1cabf7da126cb094e88cfd0eb",

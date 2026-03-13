@@ -5,8 +5,6 @@ import polars as pl
 
 from ._data import get_dataset
 
-# num_county_subs = 169
-
 
 @overload
 def puma_2010_2020(as_pandas: Literal[False] = ...) -> pl.LazyFrame: ...
@@ -116,71 +114,64 @@ def puma_2010_2020(as_pandas: bool = False) -> pl.LazyFrame | pd.DataFrame:
     return lf
 
 
-# @overload
-# def crosswalk_puma_2010_county_2020(
-#     as_pandas: Literal[False] = ...,
-# ) -> pl.LazyFrame: ...
-#
-#
-# @overload
-# def crosswalk_puma_2010_county_2020(as_pandas: Literal[True]) -> pd.DataFrame: ...
-#
-#
-# def crosswalk_puma_2010_county_2020(
-#     as_pandas: bool = False,
-# ) -> pl.LazyFrame | pd.DataFrame:
-#     """
-#     Crosswalk data between 2010 PUMAs and 2020 counties.
-#
-#     Note: uses new CT counties
-#
-#     Source: MCDC 2022 Geocorr
-#         - Form query: https://mcdc.missouri.edu/cgi-bin/broker?_PROGRAM=apps.geocorr2022.sas&_SERVICE=MCDC_long&_debug=0&state=Mo29&state=Al01&state=Ak02&state=Az04&state=Ar05&state=Ca06&state=Co08&state=Ct09&state=De10&state=Dc11&state=Fl12&state=Ga13&state=Hi15&state=Id16&state=Il17&state=In18&state=Ia19&state=Ks20&state=Ky21&state=La22&state=Me23&state=Md24&state=Ma25&state=Mi26&state=Mn27&state=Ms28&state=Mt30&state=Ne31&state=Nv32&state=Nh33&state=Nj34&state=Nm35&state=Ny36&state=Nc37&state=Nd38&state=Oh39&state=Ok40&state=Or41&state=Pa42&state=Pr72&state=Ri44&state=Sc45&state=Sd46&state=Tn47&state=Tx48&state=Ut49&state=Vt50&state=Va51&state=Wa53&state=Wv54&state=Wi55&state=Wy56&g1_=puma12&g2_=county&wtvar=pop20&nozerob=1&fileout=1&filefmt=csv&lstfmt=html&title=&afacts2=on&counties=&metros=&places=&oropt=&latitude=&longitude=&distance=&kiloms=0&locname=
-#     """
-#     lf = (
-#         pl.read_csv(
-#             CROSSWALK_DATA / "PUMA/geocorr_puma_2010_to_county_2020_with_afact2.csv",
-#             encoding="iso-8859-1",
-#             skip_rows_after_header=1,
-#             columns=[
-#                 "state",
-#                 "puma12",
-#                 "county",
-#                 "afact",
-#                 "afact2",
-#             ],
-#             schema_overrides={
-#                 "state": pl.String,
-#                 "puma12": pl.String,
-#                 "county": pl.String,
-#                 "afact": pl.String,
-#                 "afact2": pl.String,
-#             },
-#         )
-#         .lazy()
-#         .rename({"county": "county_fips"})
-#         .with_columns(
-#             puma_geoid=pl.col("state") + pl.col("puma12"),
-#             wt_PUMA_2010_to_county=pl.col("afact").str.strip_chars().cast(pl.Float64),
-#             wt_county_to_PUMA_2010=pl.col("afact2").str.strip_chars().cast(pl.Float64),
-#         )
-#         .filter(
-#             pl.col("state").is_between(pl.lit("01"), pl.lit("56")),
-#             # pl.col("wt_PUMA_2010_to_county") != 0
-#         )
-#         .select(
-#             "puma_geoid",
-#             "county_fips",
-#             "wt_PUMA_2010_to_county",
-#             "wt_county_to_PUMA_2010",
-#         )
-#         .sort("puma_geoid", "county_fips")
-#     )
-#
-#     if as_pandas:
-#         return lf.collect().to_pandas()
-#
-#     return lf
+@overload
+def puma_2010_county_2020(
+    as_pandas: Literal[False] = ...,
+) -> pl.LazyFrame: ...
+
+
+@overload
+def puma_2010_county_2020(as_pandas: Literal[True]) -> pd.DataFrame: ...
+
+
+def puma_2010_county_2020(
+    as_pandas: bool = False,
+) -> pl.LazyFrame | pd.DataFrame:
+    """
+    Crosswalk data between 2010 PUMAs (effective 2012) and 2020 (effective 2022) counties.
+
+    Note: uses new CT counties despite counties being labeled as 2020
+
+    Source: MCDC 2022 Geocorr
+    PUMA page: https://mcdc.missouri.edu/geography/PUMAs.html
+    Form query: https://mcdc.missouri.edu/cgi-bin/broker?_PROGRAM=apps.geocorr2022.sas&_SERVICE=MCDC_long&_debug=0&state=Mo29&state=Al01&state=Ak02&state=Az04&state=Ar05&state=Ca06&state=Co08&state=Ct09&state=De10&state=Dc11&state=Fl12&state=Ga13&state=Hi15&state=Id16&state=Il17&state=In18&state=Ia19&state=Ks20&state=Ky21&state=La22&state=Me23&state=Md24&state=Ma25&state=Mi26&state=Mn27&state=Ms28&state=Mt30&state=Ne31&state=Nv32&state=Nh33&state=Nj34&state=Nm35&state=Ny36&state=Nc37&state=Nd38&state=Oh39&state=Ok40&state=Or41&state=Pa42&state=Pr72&state=Ri44&state=Sc45&state=Sd46&state=Tn47&state=Tx48&state=Ut49&state=Vt50&state=Va51&state=Wa53&state=Wv54&state=Wi55&state=Wy56&g1_=puma12&g2_=county&wtvar=pop20&nozerob=1&fileout=1&filefmt=csv&lstfmt=html&title=&afacts2=on&counties=&metros=&places=&oropt=&latitude=&longitude=&distance=&kiloms=0&locname=
+    """
+    data = get_dataset(
+        "crosswalk/PUMA/geocorr_puma_2010_to_county_2020_with_afact2.csv"
+    )
+    lf = (
+        pl.scan_csv(
+            data,
+            encoding="utf8-lossy",
+            skip_rows_after_header=1,
+            schema_overrides={
+                "state": pl.String,
+                "puma12": pl.String,
+                "county": pl.String,
+                "afact": pl.String,
+                "afact2": pl.String,
+            },
+        )
+        .filter(pl.col("state").is_between(pl.lit("01"), pl.lit("56")))
+        .rename({"county": "county_fips"})
+        .with_columns(
+            puma_geoid_2010=pl.col("state") + pl.col("puma12"),
+            wt_PUMA_2010_to_county=pl.col("afact").str.strip_chars().cast(pl.Float64),
+            wt_county_to_PUMA_2010=pl.col("afact2").str.strip_chars().cast(pl.Float64),
+        )
+        .select(
+            "puma_geoid_2010",
+            "county_fips",
+            "wt_PUMA_2010_to_county",
+            "wt_county_to_PUMA_2010",
+        )
+        .sort("puma_geoid_2010", "county_fips")
+    )
+
+    if as_pandas:
+        return lf.collect().to_pandas()
+
+    return lf
 
 
 @overload
@@ -311,6 +302,7 @@ def zip_to_county(year: int, as_pandas: bool = False) -> pl.LazyFrame | pd.DataF
 #     )
 #     assert crosswalk.select(pl.len()).collect().item() == num_county_subs
 #
+#     num_county_subs = 169
 #     subcounty = (
 #         pl.scan_csv(
 #             CROSSWALK_DATA / "county/sub-est2024_9.csv",
@@ -349,7 +341,7 @@ def zip_to_county(year: int, as_pandas: bool = False) -> pl.LazyFrame | pd.DataF
 #         .drop("state_fips", "county_fips", "sumlev")
 #         .sort("county_sub_fips")
 #     )
-#     assert subcounty.select(pl.len()).collect().item() == num_county_subs
+#     assert subcounty.select(pl.len()).collect().item() == 169
 #
 #     lf = (
 #         crosswalk.join(

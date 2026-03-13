@@ -2,8 +2,14 @@ import pandera.polars as pa
 import polars as pl
 import pytest
 from pandas import DataFrame
+from pandera.polars import PolarsData
 
-from kintsugi.crosswalk import county_to_zip, puma_2010_2020, zip_to_county
+from kintsugi.crosswalk import (
+    county_to_zip,
+    puma_2010_2020,
+    puma_2010_county_2020,
+    zip_to_county,
+)
 
 from .models import BasePolarsModel
 
@@ -17,6 +23,24 @@ class PUMAVersionCrosswalk(BasePolarsModel):
     class Config:  # pyright: ignore [reportIncompatibleVariableOverride]
         unique: list[str] = ["puma_geoid_2010", "puma_geoid_2020"]
 
+    @pa.dataframe_check
+    def has_correct_states(cls, data: PolarsData) -> bool:
+        return (
+            data.lazyframe.select(
+                pl.all_horizontal(
+                    pl.col("puma_geoid_2010")
+                    .str.slice(0, 2)
+                    .is_between(pl.lit("01"), pl.lit("56")),
+                    pl.col("puma_geoid_2020")
+                    .str.slice(0, 2)
+                    .is_between(pl.lit("01"), pl.lit("56")),
+                ).all()
+            )
+            .collect()
+            .item()
+            is True
+        )
+
 
 def test_puma_2010_2020() -> None:
     puma_2010_2020().collect().pipe(PUMAVersionCrosswalk.validate, lazy=True)
@@ -28,6 +52,40 @@ def test_puma_2010_2020_as_pandas() -> None:
     assert isinstance(df, DataFrame)
 
 
+class PUMACountyCrosswalk(BasePolarsModel):
+    puma_geoid_2010: pl.String  # pyright: ignore [reportUninitializedInstanceVariable]
+    county_fips: pl.String  # pyright: ignore [reportUninitializedInstanceVariable]
+    wt_PUMA_2010_to_county: pl.Float64  # pyright: ignore [reportUninitializedInstanceVariable]
+    wt_county_to_PUMA_2010: pl.Float64  # pyright: ignore [reportUninitializedInstanceVariable]
+
+    class Config:  # pyright: ignore [reportIncompatibleVariableOverride]
+        unique: list[str] = ["puma_geoid_2010", "county_fips"]
+
+    @pa.dataframe_check
+    def has_correct_states(cls, data: PolarsData) -> bool:
+        return (
+            data.lazyframe.select(
+                pl.col("county_fips")
+                .str.slice(0, 2)
+                .is_between(pl.lit("01"), pl.lit("56"))
+                .all()
+            )
+            .collect()
+            .item()
+            is True
+        )
+
+
+def test_puma_2010_county_2020() -> None:
+    puma_2010_county_2020().collect().pipe(PUMACountyCrosswalk.validate, lazy=True)
+
+
+def test_puma_2010_county_2020_as_pandas() -> None:
+    df = puma_2010_county_2020(as_pandas=True)
+
+    assert isinstance(df, DataFrame)
+
+
 class ZipCountyCrosswalk(BasePolarsModel):
     zip_code: pl.String  # pyright: ignore [reportUninitializedInstanceVariable]
     county_fips: pl.String  # pyright: ignore [reportUninitializedInstanceVariable]
@@ -35,6 +93,20 @@ class ZipCountyCrosswalk(BasePolarsModel):
 
     class Config:  # pyright: ignore [reportIncompatibleVariableOverride]
         unique: list[str] = ["zip_code", "county_fips"]
+
+    @pa.dataframe_check
+    def has_correct_states(cls, data: PolarsData) -> bool:
+        return (
+            data.lazyframe.select(
+                pl.col("county_fips")
+                .str.slice(0, 2)
+                .is_between(pl.lit("01"), pl.lit("56"))
+                .all()
+            )
+            .collect()
+            .item()
+            is True
+        )
 
 
 @pytest.mark.parametrize(
