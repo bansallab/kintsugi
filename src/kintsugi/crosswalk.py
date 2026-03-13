@@ -234,172 +234,170 @@ def zip_to_county(year: int, as_pandas: bool = False) -> pl.LazyFrame | pd.DataF
     return lf
 
 
-# @overload
-# def crosswalk_CT_counties(as_pandas: Literal[False] = ...) -> pl.LazyFrame: ...
-#
-#
-# @overload
-# def crosswalk_CT_counties(as_pandas: Literal[True]) -> pd.DataFrame: ...
-#
-#
-# def crosswalk_CT_counties(as_pandas: bool = False) -> pl.LazyFrame | pd.DataFrame:
-#     """
-#     Crosswalk CT counties between pre and post-2022 changes. Weights calculated based on county subdivision populations.
-#
-#     See:
-#         - FIPS code changes: https://www.census.gov/programs-surveys/geography/technical-documentation/county-changes.html
-#         - CT specific: https://www2.census.gov/geo/pdfs/reference/ct_county_equiv_change.pdf
-#         - CT specific: https://www.federalregister.gov/documents/2022/06/06/2022-12063/change-to-county-equivalents-in-the-state-of-connecticut
-#
-#     Crosswalk: https://www.census.gov/programs-surveys/geography/technical-documentation/county-changes.January_2020.html
-#     Source: https://www2.census.gov/geo/docs/reference/ct_change/ct_cou_to_cousub_crosswalk.txt
-#
-#     CT county subdivision populations source: https://www.census.gov/data/tables/time-series/demo/popest/2020s-total-cities-and-towns.html
-#     FTP: https://www2.census.gov/programs-surveys/popest/datasets/2020-2024/cities/totals/sub-est2024_9.csv
-#
-#     """
-#     crosswalk = (
-#         pl.scan_csv(
-#             CROSSWALK_DATA / "county/ct_cou_to_cousub_crosswalk.txt",
-#             separator="|",
-#             n_rows=174,
-#             infer_schema=False,
-#         )
-#         .select(
-#             "STATEFP\n(INCITS38)",
-#             "OLD_COUNTYFP\n(INCITS31)",
-#             "OLD_COUNTY_NAMELSAD",
-#             "NEW_COUNTYFP\n(INCITS31)",
-#             "NEW_COUNTY_NAMELSAD",
-#             "COUSUBFP",
-#             "OLD_COUSUB_GEOID",
-#             "NEW_COUSUB_GEOID",
-#             "COUSUB_NAMELSAD",
-#         )
-#         .rename(
-#             {
-#                 "STATEFP\n(INCITS38)": "state_fips",
-#                 "OLD_COUNTYFP\n(INCITS31)": "county_fips_old",
-#                 "OLD_COUNTY_NAMELSAD": "county_name_old",
-#                 "NEW_COUNTYFP\n(INCITS31)": "county_fips_new",
-#                 "NEW_COUNTY_NAMELSAD": "county_name_new",
-#                 "COUSUBFP": "county_sub_fips",
-#                 "OLD_COUSUB_GEOID": "county_sub_geoid_old",
-#                 "NEW_COUSUB_GEOID": "county_sub_geoid_new",
-#                 "COUSUB_NAMELSAD": "county_sub_name",
-#             }
-#         )
-#         .filter(
-#             # NOTE: 5 rows labeled with "County subdivisions not defined" but their GEOID/FIPS
-#             # doesn't make sense anyway
-#             pl.col("county_sub_fips") != "00000"
-#         )
-#         .with_columns(
-#             (pl.col("state_fips") + pl.col(col)).alias(col)
-#             for col in ["county_fips_old", "county_fips_new"]
-#         )
-#         .drop("state_fips")
-#     )
-#     assert crosswalk.select(pl.len()).collect().item() == num_county_subs
-#
-#     num_county_subs = 169
-#     subcounty = (
-#         pl.scan_csv(
-#             CROSSWALK_DATA / "county/sub-est2024_9.csv",
-#             schema_overrides={
-#                 "SUMLEV": pl.String,
-#                 "STATE": pl.String,
-#                 "COUNTY": pl.String,
-#                 "COUSUB": pl.String,
-#                 "NAME": pl.String,
-#                 "POPESTIMATE2024": pl.Int64,
-#             },
-#         )
-#         .select(
-#             "SUMLEV",
-#             "STATE",
-#             "COUNTY",
-#             "COUSUB",
-#             "NAME",
-#             "POPESTIMATE2024",
-#         )
-#         .rename(
-#             {
-#                 "SUMLEV": "sumlev",
-#                 "STATE": "state_fips",
-#                 "COUNTY": "county_fips",
-#                 "COUSUB": "county_sub_fips",
-#                 "NAME": "county_sub_name",
-#                 "POPESTIMATE2024": "pop_2024",
-#             }
-#         )
-#         .filter(
-#             # only minor civil divisions
-#             pl.col("sumlev") == "061"
-#         )
-#         .with_columns(county_fips=pl.col("state_fips") + pl.col("county_fips"))
-#         .drop("state_fips", "county_fips", "sumlev")
-#         .sort("county_sub_fips")
-#     )
-#     assert subcounty.select(pl.len()).collect().item() == 169
-#
-#     lf = (
-#         crosswalk.join(
-#             subcounty,
-#             on="county_sub_fips",
-#             how="inner",
-#             validate="1:1",
-#         )
-#         .select(
-#             "county_sub_fips",
-#             "county_sub_name",
-#             "county_fips_new",
-#             "county_name_new",
-#             "county_fips_old",
-#             "county_name_old",
-#             "pop_2024",
-#         )
-#         .with_columns(
-#             pop_old=pl.col("pop_2024").sum().over("county_fips_old"),
-#             pop_new=pl.col("pop_2024").sum().over("county_fips_new"),
-#         )
-#         .group_by(
-#             [
-#                 "county_fips_new",
-#                 "county_name_new",
-#                 "county_fips_old",
-#                 "county_name_old",
-#                 "pop_old",
-#                 "pop_new",
-#             ]
-#         )
-#         .agg(pop_agg=pl.col("pop_2024").sum())  # agg county sub to county pairs
-#         # NOTE: want weights to be expected prop. of origin FIPS that are located in dest. FIPS
-#         # Aka prop. of origin FIPS that is located in dest. FIPS
-#         # Ex: wt_new_to_old should give expected prop. of new FIPS that is located in old FIPS.
-#         .with_columns(
-#             wt_new_to_old=pl.col("pop_agg") / pl.col("pop_new"),
-#             wt_old_to_new=pl.col("pop_agg") / pl.col("pop_old"),
-#         )
-#         .select(
-#             "county_fips_old",
-#             "county_name_old",
-#             "county_fips_new",
-#             "county_name_new",
-#             "wt_new_to_old",
-#             "wt_old_to_new",
-#         )
-#         .sort("county_fips_old")
-#     )
-#     assert (
-#         lf.select(pl.len()).collect().item()
-#         == lf.unique(["county_fips_old", "county_fips_new"])
-#         .select(pl.len())
-#         .collect()
-#         .item()
-#     )
-#
-#     if as_pandas:
-#         return lf.collect().to_pandas()
-#
-#     return lf
+@overload
+def counties_CT(as_pandas: Literal[False] = ...) -> pl.LazyFrame: ...
+
+
+@overload
+def counties_CT(as_pandas: Literal[True]) -> pd.DataFrame: ...
+
+
+def counties_CT(as_pandas: bool = False) -> pl.LazyFrame | pd.DataFrame:
+    """
+    Crosswalk CT counties between pre and post-2022 changes.
+
+    Uses county subdivisions as a more accurate intermediary.
+    Weights calculated based on county subdivision 2024 populations.
+
+    See:
+        - https://www2.census.gov/geo/pdfs/reference/ct_county_equiv_change.pdf
+        - https://www.federalregister.gov/documents/2022/06/06/2022-12063/change-to-county-equivalents-in-the-state-of-connecticut
+
+    Crosswalk data: https://www.census.gov/programs-surveys/geography/technical-documentation/county-changes.January_2020.html
+    Source: https://www2.census.gov/geo/docs/reference/ct_change/ct_cou_to_cousub_crosswalk.txt
+
+    CT county subdivision populations source: https://www.census.gov/data/tables/time-series/demo/popest/2020s-total-cities-and-towns.html
+    FTP: https://www2.census.gov/programs-surveys/popest/datasets/2020-2024/cities/totals/sub-est2024_9.csv
+
+    """
+    num_county_subs = 169
+    data_county_to_sub = get_dataset("crosswalk/county/ct_cou_to_cousub_crosswalk.txt")
+    # NOTE: provides mapping of county subdivisions between old and new CT counties
+    crosswalk = (
+        pl.scan_csv(
+            data_county_to_sub,
+            separator="|",
+            n_rows=174,
+            infer_schema=False,
+        )
+        .rename(lambda col: col.strip().lower().split("(")[0].strip())
+        .rename(
+            {
+                "statefp": "state_fips",
+                "old_countyfp": "county_fips_old",
+                "old_county_namelsad": "county_name_old",
+                "new_countyfp": "county_fips_new",
+                "new_county_namelsad": "county_name_new",
+                "cousubfp": "county_sub_fips",
+                "old_cousub_geoid": "county_sub_geoid_old",
+                "new_cousub_geoid": "county_sub_geoid_new",
+                "cousub_namelsad": "county_sub_name",
+            }
+        )
+        .filter(
+            # NOTE: 5 rows labeled with "County subdivisions not defined" but their GEOID/FIPS
+            # doesn't make sense anyway
+            pl.col("county_sub_fips") != "00000"
+        )
+        .with_columns(
+            (pl.col("state_fips") + pl.col(col)).alias(col)
+            for col in ["county_fips_old", "county_fips_new"]
+        )
+        .select(
+            "county_sub_fips",
+            "county_fips_new",
+            "county_name_new",
+            "county_fips_old",
+            "county_name_old",
+        )
+    )
+    assert crosswalk.select(pl.len()).collect().item() == num_county_subs
+
+    data_county_sub = get_dataset("crosswalk/county/sub-est2024_9.csv")
+    # NOTE: provides county subdivision population counts
+    county_sub = (
+        pl.scan_csv(
+            data_county_sub,
+            schema_overrides={
+                "SUMLEV": pl.String,
+                "STATE": pl.String,
+                "COUNTY": pl.String,
+                "COUSUB": pl.String,
+                "NAME": pl.String,
+                "POPESTIMATE2024": pl.Int64,
+            },
+        )
+        .rename(
+            {
+                "SUMLEV": "sumlev",
+                "COUSUB": "county_sub_fips",
+                "NAME": "county_sub_name",
+                "POPESTIMATE2024": "pop_2024",
+            }
+        )
+        .select(
+            "sumlev",
+            "county_sub_fips",
+            "county_sub_name",
+            "pop_2024",
+        )
+        .filter(
+            # 061 apparently considered part of 060 (county subdivisions/minor civil divisions)
+            # Use because it's one level below county (050)
+            pl.col("sumlev") == "061"
+        )
+        .drop("sumlev")
+        .sort("county_sub_fips")
+    )
+    assert county_sub.select(pl.len()).collect().item() == 169
+
+    print(crosswalk.collect())
+    print(county_sub.collect())
+
+    lf = (
+        crosswalk.join(
+            county_sub,
+            on="county_sub_fips",
+            how="inner",
+            validate="1:1",
+        )
+        .select(
+            "county_sub_fips",
+            "county_sub_name",
+            "county_fips_new",
+            "county_name_new",
+            "county_fips_old",
+            "county_name_old",
+            "pop_2024",
+        )
+        .with_columns(
+            pop_old=pl.col("pop_2024").sum().over("county_fips_old"),
+            pop_new=pl.col("pop_2024").sum().over("county_fips_new"),
+        )
+        .group_by(
+            [
+                "county_fips_new",
+                "county_name_new",
+                "county_fips_old",
+                "county_name_old",
+                "pop_old",
+                "pop_new",
+            ]
+        )
+        .agg(
+            pop_intersect=pl.col(
+                "pop_2024"
+            ).sum()  # sum county subdivision population by new-county-old-county pairs
+        )
+        # NOTE: want weights to be expected prop. of intersection that is located in dest. FIPS
+        # Aka prop. of origin FIPS that is located in dest. FIPS
+        # Ex: wt_new_to_old should give expected prop. of new FIPS that is located in old FIPS.
+        .with_columns(
+            wt_new_to_old=pl.col("pop_intersect") / pl.col("pop_new"),
+            wt_old_to_new=pl.col("pop_intersect") / pl.col("pop_old"),
+        )
+        .select(
+            "county_fips_old",
+            "county_name_old",
+            "county_fips_new",
+            "county_name_new",
+            "wt_new_to_old",
+            "wt_old_to_new",
+        )
+        .sort("county_fips_old")
+    )
+
+    if as_pandas:
+        return lf.collect().to_pandas()
+
+    return lf

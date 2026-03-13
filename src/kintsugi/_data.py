@@ -18,6 +18,8 @@ DATASETS = {
     "county_neighbors/county_adjacency2023.txt": "2dbf9a8bae1b7c50db3a9db4864b073d2423c3e6e63518c97d649453e2809843",
     "county_neighbors/county_adjacency2024.txt": "20cffeb48ba46972fb949c453d3fbf62620115039c45c88bc80c094885650816",
     "county_neighbors/county_adjacency2025.txt": "27046a5f09f66205fd9869afbfb6dcae744e1c9b85cb19dd767c580211fb4575",
+    "crosswalk/county/ct_cou_to_cousub_crosswalk.txt": "13ad002564e30e6dcd1df112fdaa985f2cd0cdb908f7f3017cd2723db294cff8",
+    "crosswalk/county/sub-est2024_9.csv": "e5bd2cb1b10cf12d741572eef9e8eff19a1f6c5e08eb910d6f44f299c7ca83df",
     "crosswalk/county_to_zip/county_to_zip_2016.parquet": "f13d79b059b272c9ac4ff02dbe4e0e26d56acffad837adeb0f2d86d3101fd9ad",
     "crosswalk/county_to_zip/county_to_zip_2017.parquet": "009141988a3b902179d6beed80260faf2474a4cda8d6af0667d88ab4f0140b0b",
     "crosswalk/county_to_zip/county_to_zip_2018.parquet": "697425d6ffba4c8f95c80a961814d2291f61507336010349a4d78c10ce5cfdba",
