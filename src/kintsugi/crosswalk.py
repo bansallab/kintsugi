@@ -341,9 +341,6 @@ def counties_CT(as_pandas: bool = False) -> pl.LazyFrame | pd.DataFrame:
     )
     assert county_sub.select(pl.len()).collect().item() == 169
 
-    print(crosswalk.collect())
-    print(county_sub.collect())
-
     lf = (
         crosswalk.join(
             county_sub,
