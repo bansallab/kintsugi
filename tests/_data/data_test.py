@@ -1,4 +1,4 @@
-from collections.abc import Generator, MutableMapping
+from collections.abc import Generator
 from pathlib import Path
 from typing import Callable
 from unittest.mock import patch
@@ -8,6 +8,7 @@ import requests
 from platformdirs import user_cache_path
 
 from kintsugi._data.data import (
+    ChecksumTable,
     GetDatasetError,
     download_dataset,
     file_valid,
@@ -72,18 +73,20 @@ def test_get_all_datasets(mock_get_cache_dir: Callable[[], Path]) -> None:
     Test fetching all real datasets. Cached files don't exist.
     """
 
-    def flatten(d, k_parent: str = "", sep: str = "/") -> dict[str, str]:
+    def flatten_keys(
+        d: ChecksumTable, k_parent: str = "", sep: str = "/"
+    ) -> dict[str, str]:
         items: list[tuple[str, str]] = []
         for k, v in d.items():
             k_next = k_parent + sep + k if k_parent else k
-            if isinstance(v, MutableMapping):
-                items.extend(flatten(v, k_next, sep).items())
-            else:
+            if isinstance(v, str):
                 items.append((k_next, v))
+            else:
+                items.extend(flatten_keys(v, k_next, sep).items())
 
         return dict(items)
 
-    datasets = flatten(load_checksums())
+    datasets = flatten_keys(load_checksums())
 
     with patch("kintsugi._data.data.get_cache_dir", mock_get_cache_dir):
         for file_name in datasets.keys():
