@@ -3,7 +3,7 @@ from typing import Literal, overload
 import pandas as pd
 import polars as pl
 
-from ._data import get_dataset
+from ._data.data import get_dataset
 
 
 @overload

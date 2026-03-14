@@ -2,7 +2,7 @@ from typing import Literal
 
 import geopandas as gpd
 
-from ._data import get_dataset
+from ._data.data import get_dataset
 
 type ShapefileYear = Literal[2020, 2024]
 

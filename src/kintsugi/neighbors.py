@@ -5,7 +5,7 @@ from typing import Literal, overload
 import pandas as pd
 import polars as pl
 
-from ._data import get_dataset
+from ._data.data import get_dataset
 from .geo import ShapefileYear, county_geo
 
 type NeighborsYear = Literal[2010, 2023, 2024, 2025]
